@@ -68,11 +68,49 @@ module TicTacGame
     return !check_flag.empty?
   end
   def get_player_input
-    puts "Player #{self.player_turn}, enter coordinates as row,col (1<=row<=3, 1<=col<=3):"
-    coords = gets.chomp
-    coords_arr=coords.split(",")
-    #returns an array of less than 2 elements if given faulty input
-    coords_arr = coords_arr.map { |x| x.to_i }.reject { |x| !(x.is_a?(Integer))&&x<1&&x>3} 
+    valid_flag = false
+    valid_input = InputValidator.new
+    while (!valid_flag)
+      puts "Player #{self.player_turn}, enter coordinates as row,col (1<=row<=3, 1<=col<=3):"
+      coords = gets.chomp
+      coords_arr=coords.split(",")
+      valid_input.x_will_change!
+      valid_input.y_will_change!
+      valid_input.set_xy_coords(coords_arr[0],coords_arr[1])
+      if (valid_input.valid?)
+        valid_flag = true
+         #a little contrived here - probably just need to check if array is < 2 elements instead of validating
+        #returns an array of less than 2 elements if given faulty input
+        coords_arr = coords_arr.map { |x| x.to_i }.reject { |x| !(x.is_a?(Integer))&&x<1&&x>3} 
+      else
+         puts "ERROR: Player #{self.player_turn}, #{valid_input.errors().full_messages}"
+      end
+    end
+    puts "input changes #{valid_input.changes}"
+    coords_arr #finally, a valid coords array
+  end #get_player_input
+end
+
+#a Ruby class using ActiveModel::Validations to validate player input string
+#assumes you're already working with a gemset containing rails
+require 'active_model'
+class InputValidator
+  include ActiveModel::Validations
+  include ActiveModel::Dirty
+  validates_presence_of :x, :y
+  validates_numericality_of :x, :y, :only_integer=>true, :less_than_or_equal_to => 3, :greater_than_or_equal_to => 1
+  define_attribute_methods [:x, :y] #track changes to x,y for fun
+  attr_accessor :x, :y
+  
+  def initialize(x=1,y=1)
+    @x,@y=x,y #store the x,y coordinates
+  end
+  def set_xy_coords(x=1,y=1)
+    @x=x
+    @y=y
+  end
+  def get_xy_coords
+    return [x,y]
   end
 end
 
